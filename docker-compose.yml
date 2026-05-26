@@ -1,0 +1,22 @@
+services:
+
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: boletindb
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: boletin1234
+      POSTGRES_DB: boletin_DB
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d boletinDB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
