@@ -25,12 +25,12 @@ La UI muestra la respuesta + boletines fuente
 
 ## Requisitos previos
 
-Antes de correr el proyecto necesitás tener instalado:
+Antes de correr el proyecto se necesita tener instalado:
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) — para correr PostgreSQL con pgvector
 - [Python 3.10 o superior](https://www.python.org/downloads/) — para correr la API
 - [Git](https://git-scm.com/) — para clonar el repositorio
-- Una API key de [Groq](https://console.groq.com) — gratuita, sin tarjeta de crédito
+- Una API key de [Groq](https://console.groq.com) 
 
 ---
 
@@ -45,7 +45,7 @@ cd boletin-rag
 
 ### 2. Crear el archivo `.env`
 
-Creá un archivo `.env` en la raíz del proyecto con este contenido:
+Crear un archivo `.env` en la raíz del proyecto con este contenido:
 
 ```
 DB_HOST=localhost
@@ -57,7 +57,7 @@ GROQ_API_KEY=tu_api_key_de_groq
 GROQ_MODEL=llama-3.1-8b-instant
 ```
 
-Reemplazá `tu_api_key_de_groq` por tu key de [console.groq.com](https://console.groq.com).
+Reemplazar `tu_api_key_de_groq` por la key de [console.groq.com](https://console.groq.com).
 
 ### 3. Levantar la base de datos
 
@@ -67,8 +67,8 @@ docker compose up -d
 
 ### 4. Restaurar la base de datos
 
-Necesitás el archivo `dump_plain.sql` (no incluido en el repo por su tamaño).
-Una vez que lo tengas en la carpeta del proyecto:
+Se necesita el archivo `dump_plain.sql` (no incluido en el repo por su tamaño).
+Una vez que se tenga en la carpeta del proyecto:
 
 ```bash
 docker cp dump_plain.sql boletindb:/tmp/dump_plain.sql
