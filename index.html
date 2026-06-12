@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Consultor de Boletines — CCPM</title>
+
+    <!-- Iconos -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="static/css/styles.css"/>
+</head>
+<body>
+
+    <!-- ========================
+         TOPBAR
+    ======================== -->
+    <div class="topbar">
+        <a href="#">Contacto</a>
+    </div>
+
+    <!-- ========================
+         HEADER CON LOGO Y NAV
+    ======================== -->
+    <div class="header">
+        <div class="logo-wrap">
+            <img src="logo.png" alt="Misiones CCPM" />
+        </div>
+        <nav class="nav">
+            <a href="#">Inicio</a>
+            <a href="#">Servicios</a>
+            <a href="#">Normativas</a>
+            <a href="#">Correo</a>
+            <a href="#">Contacto</a>
+        </nav>
+    </div>
+
+    <!-- ========================
+         SUBNAVEGACION
+    ======================== -->
+    <div class="subbar">
+        <a href="#">Institucional</a>
+        <a href="#">Autoridades</a>
+    </div>
+
+    <!-- ========================
+         TITULO DE LA PAGINA
+    ======================== -->
+    <div class="page-title">
+        <h1>
+            <i class="ti ti-file-search"></i>
+            Consultor de Boletines Oficiales
+        </h1>
+    </div>
+
+    <!-- ========================
+         CONTENIDO PRINCIPAL
+    ======================== -->
+    <div class="main">
+        <div class="chat-wrap">
+
+            <!-- Descripcion del sistema -->
+            <div class="info-card">
+                <i class="ti ti-info-circle"></i>
+                Podés consultar en lenguaje natural sobre los boletines oficiales.
+                El sistema busca entre boletines indexados y responde con las fuentes correspondientes.
+            </div>
+
+            <!-- Ventana del chat -->
+            <div class="app">
+
+                <!-- Cabecera del chat -->
+                <div class="chat-header">
+                    <div class="chat-header-icon">
+                        <i class="ti ti-robot" style="font-size:17px;color:#1a6fb5"></i>
+                    </div>
+                    <div>
+                        <div class="chat-header-title">Asistente de Boletines</div>
+                        <div class="chat-header-sub">CCPM — Dirección General del Centro de Cómputos</div>
+                    </div>
+                    <div class="status">
+                        <div class="status-dot"></div>
+                        En línea
+                    </div>
+                </div>
+
+                <!-- Area de mensajes -->
+                <div class="messages" id="messages">
+                    <div class="empty" id="empty-state">
+                        <i class="ti ti-file-search"></i>
+                        <p>Hacé una pregunta sobre los boletines oficiales</p>
+                        <div class="suggestions">
+                            <button class="sug-btn" onclick="setSuggestion('boletines sobre licitaciones')">Licitaciones</button>
+                            <button class="sug-btn" onclick="setSuggestion('boletines de 2023')">Boletines de 2023</button>
+                            <button class="sug-btn" onclick="setSuggestion('boletines sobre contratos')">Contratos</button>
+                            <button class="sug-btn" onclick="setSuggestion('boletines sobre obras públicas')">Obras públicas</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de input -->
+                <div class="inputbar">
+                    <div class="input-wrap">
+                        <textarea
+                            id="input"
+                            rows="1"
+                            placeholder="Escribí tu consulta sobre boletines..."
+                            onkeydown="handleKey(event)"
+                            oninput="autoResize(this)"
+                        ></textarea>
+                    </div>
+                    <button class="send-btn" id="send-btn" onclick="sendMessage()">
+                        <i class="ti ti-arrow-up" style="font-size:15px;color:white"></i>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================
+         FOOTER
+    ======================== -->
+    <div class="footer">
+        <p>Dirección General del Centro de Cómputos — Provincia de Misiones &nbsp;|&nbsp; Sistema de Boletín Oficial</p>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="static/js/chat.js"></script>
+
+</body>
+</html>
