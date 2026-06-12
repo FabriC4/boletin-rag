@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+dump_plain.sql
+dump_compat.dump
+boletin_DB
+restore.bat
