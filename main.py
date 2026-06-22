@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
 from groq import Groq
+from pdf2image import convert_from_path
+import pytesseract
 
 load_dotenv()
 
@@ -63,40 +65,44 @@ def get_connection():
 # ========================
 # LECTURA DE PDF DESDE DISCO
 # ========================
-def obtener_contenido_pdf(nro_boletin: int) -> str:
-    """Lee el PDF desde la carpeta local boletines/"""
-    conn = get_connection()
-
-    with conn.cursor() as cur:
-        cur.execute(
-            "SELECT patharchivo FROM boletines WHERE nro_boletin = %s",
-            (nro_boletin,)
-        )
-        row = cur.fetchone()
-
-    conn.close()
-
-    if not row or not row[0]:
+def obtener_contenido_pdf(nro_boletin: int):
+    # Asumo que tus PDFs están guardados con el número en una carpeta
+    pdf_path = f"boletines/{nro_boletin}.pdf" 
+    
+    if not os.path.exists(pdf_path):
         return None
 
-    path_archivo = row[0].strip()
-    nombre_archivo = os.path.basename(path_archivo)
-    ruta_local = os.path.join("boletines", nombre_archivo)
+    texto_extraido = ""
+    
+    # PASO 1: Intentar extracción nativa rápida con pdfplumber
+    with pdfplumber.open(pdf_path) as pdf:
+        for pagina in pdf.pages:
+            texto_pag = pagina.extract_text()
+            if texto_pag:
+                texto_extraido += texto_pag + "\n"
+    
+    # PASO 2: CONTROL DE FLEXIBILIDAD (¿Es un PDF escaneado o una imagen?)
+    # Si el texto extraído es casi nulo (menos de 150 caracteres en todo el PDF),
+    # significa que el PDF es una imagen o un escaneo sin texto real.
+    if len(texto_extraido.strip()) < 150:
+        print(f"⚠️ Boletín {nro_boletin} detectado como IMAGEN/ESCANEO. Activando OCR...")
+        texto_extraido = "" # Limpiamos por las dudas
+        
+        try:
+            # Convertimos las páginas del PDF en imágenes en memoria
+            paginas_como_imagenes = convert_from_path(pdf_path, dpi=150)
+            
+            # Pasamos el OCR de Tesseract página por página (configurado en español)
+            for i, imagen in enumerate(paginas_como_imagenes):
+                texto_ocr = pytesseract.image_to_string(imagen, lang='spa')
+                texto_extraido += f"--- PÁGINA {i+1} (Extraída por OCR) ---\n{texto_ocr}\n"
+                
+            print(f"✅ OCR finalizado con éxito para el boletín {nro_boletin}.")
+        except Exception as e:
+            print(f"❌ Error en el proceso de OCR: {str(e)}")
+            return None
 
-    if not os.path.exists(ruta_local):
-        print(f"PDF no encontrado en disco: {ruta_local}")
-        return None
-
-    try:
-        texto = ""
-        with pdfplumber.open(ruta_local) as pdf:
-            for page in pdf.pages:
-                texto += page.extract_text() or ""
-        return texto.strip() if texto.strip() else None
-    except Exception as e:
-        print(f"Error leyendo PDF {ruta_local}: {e}")
-        return None
-
+    return texto_extraido
 
 # ========================
 # BUSQUEDA DE BOLETINES
@@ -173,12 +179,14 @@ Descripción: {desc}
         except (ValueError, TypeError):
             nro_int = None
 
-        if nro_int in numeros_pregunta or len(boletines) == 1:
-            print(f"Trayendo texto del PDF para el boletín {nro_int}...")
+        # Si el usuario mencionó el número, o si la búsqueda semántica trajo este boletín como relevante
+        if nro_int in numeros_pregunta or len(boletines) <= 3: 
+            print(f"Trayendo texto COMPLETO del PDF para el boletín {nro_int}...")
             contenido = obtener_contenido_pdf(nro_int)
 
             if contenido:
-                contexto += f"Contenido completo del PDF:\n{contenido[:4000]}\n"
+                # Quitamos el límite de 4000 y le pasamos todo el documento (hasta 200k caracteres por seguridad)
+                contexto += f"Contenido completo del PDF:\n{contenido[:200000]}\n"
             else:
                 contexto += "Contenido del PDF: No disponible en disco.\n"
 
@@ -195,26 +203,30 @@ def consultar_groq(pregunta: str, contexto: str):
             messages=[
                 {
                     "role": "system",
-                    "content": """Sos un asistente experto en boletines oficiales.
-Respondé la pregunta ÚNICAMENTE basándote en los boletines proporcionados.
-Si la información no está en los boletines, decilo claramente.
-Respondé siempre en español."""
+                    "content": """Sos un sistema experto e imbatible en análisis de boletines oficiales de la provincia.
+Tu objetivo es dar respuestas extremadamente completas, exhaustivas y detalladas. No resumas de más ni omitas datos.
+
+REGLAS DE FUNCIONAMIENTO:
+1. Respondé ÚNICAMENTE basándote en los boletines proporcionados en el contexto.
+2. Si la pregunta es sobre buscar nombres, empresas, deudas o edictos, revisá TODO el texto del PDF adjunto en el contexto.
+3. Transcribí o volcá TODOS los resultados que encuentres. Si hay 20 personas afectadas en un cuadro de Rentas o Sucesores, listá las 20 personas. No uses "etc." ni recortes las listas.
+4. FORMATO: Usá títulos (##, ###) para separar temas. Si encontrás datos estructurados (Nombres, Expedientes, Montos, Fechas), organizalos OBLIGATORIAMENTE en Tablas de Markdown limpias.
+5. Usá negrita para nombres propios, empresas (S.R.L., S.A.) y números de expedientes."""
                 },
                 {
                     "role": "user",
-                    "content": f"""BOLETINES RELEVANTES:
+                    "content": f"""BOLETINES RELEVANTES PARA ANALIZAR:
 {contexto}
 
-PREGUNTA: {pregunta}"""
+PREGUNTA DEL USUARIO: {pregunta}"""
                 }
             ],
-            max_tokens=1024,
-            temperature=0.3
+            max_tokens=4096, # Le damos el máximo permitido de salida para que no se corte a mitad de una tabla
+            temperature=0.1  # Bajamos la temperatura a 0.1 para que sea ultra preciso con los datos y no invente nada
         )
         return response.choices[0].message.content
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar Groq: {str(e)}")
-
 
 # ========================
 # ENDPOINTS
