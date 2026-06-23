@@ -1,4 +1,5 @@
 import os
+import json
 import psycopg2
 from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
@@ -14,14 +15,20 @@ DB_CONFIG = {
     "password": os.getenv("DB_PASSWORD"),
 }
 
-MODELO = "paraphrase-multilingual-MiniLM-L12-v2"
+MODELO_EMBEDDINGS = "paraphrase-multilingual-MiniLM-L12-v2"
+ARCHIVO_EMBEDDINGS = "embeddings.json"
+
+
+def get_connection():
+    return psycopg2.connect(**DB_CONFIG)
+
 
 def main():
-    print(f"Cargando modelo {MODELO}...")
-    modelo = SentenceTransformer(MODELO)
+    print(f"Cargando modelo {MODELO_EMBEDDINGS}...")
+    modelo = SentenceTransformer(MODELO_EMBEDDINGS)
 
     print("Conectando a la base de datos...")
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = get_connection()
 
     with conn.cursor() as cur:
         cur.execute("""
@@ -29,39 +36,47 @@ def main():
             FROM public.boletines
             WHERE descripcion IS NOT NULL
               AND descripcion != ''
-              AND embedding IS NULL
             ORDER BY id
         """)
         boletines = cur.fetchall()
 
-    total = len(boletines)
-    print(f"Boletines a procesar: {total}")
-    print("-" * 50)
-
-    errores = []
-
-    for boletin in tqdm(boletines, desc="Generando embeddings"):
-        boletin_id, nro_boletin, descripcion = boletin
-        try:
-            embedding = modelo.encode(descripcion).tolist()
-            with conn.cursor() as cur:
-                cur.execute(
-                    "UPDATE public.boletines SET embedding = %s WHERE id = %s",
-                    (embedding, boletin_id)
-                )
-            conn.commit()
-        except Exception as e:
-            errores.append((boletin_id, str(e)))
-            print(f"\nError en boletín {nro_boletin}: {e}")
-
     conn.close()
 
-    print("\n" + "=" * 50)
-    print(f"Procesados: {total - len(errores)}/{total}")
-    if errores:
-        print(f"Errores: {len(errores)}")
+    # Cargar embeddings existentes si ya hay un archivo previo
+    if os.path.exists(ARCHIVO_EMBEDDINGS):
+        with open(ARCHIVO_EMBEDDINGS, "r", encoding="utf-8") as f:
+            embeddings_existentes = json.load(f)
+        ids_existentes = {str(e["id"]) for e in embeddings_existentes}
+        print(f"Embeddings existentes: {len(embeddings_existentes)}")
     else:
-        print("Sin errores.")
+        embeddings_existentes = []
+        ids_existentes = set()
+
+    boletines_nuevos = [b for b in boletines if str(b[0]) not in ids_existentes]
+    print(f"Boletines nuevos a procesar: {len(boletines_nuevos)}")
+
+    if not boletines_nuevos:
+        print("Todo está al día, no hay nada nuevo que procesar.")
+        return
+
+    for boletin in tqdm(boletines_nuevos, desc="Generando embeddings"):
+        id_bd, nro_boletin, descripcion = boletin
+        try:
+            vector = modelo.encode(descripcion).tolist()
+            embeddings_existentes.append({
+                "id": id_bd,
+                "nro_boletin": nro_boletin,
+                "vector": vector
+            })
+        except Exception as e:
+            print(f"\nError en boletín {nro_boletin}: {e}")
+
+    with open(ARCHIVO_EMBEDDINGS, "w", encoding="utf-8") as f:
+        json.dump(embeddings_existentes, f)
+
+    print(f"\nEmbeddings guardados en {ARCHIVO_EMBEDDINGS}")
+    print(f"Total: {len(embeddings_existentes)}")
+
 
 if __name__ == "__main__":
     main()

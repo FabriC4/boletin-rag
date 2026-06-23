@@ -105,6 +105,8 @@ function removeTyping() {
 // ========================
 // ENVIAR CONSULTA A LA API
 // ========================
+const historial = [];
+
 async function sendMessage() {
     if (loading) return;
 
@@ -124,7 +126,7 @@ async function sendMessage() {
         const res = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pregunta, top_k: 5 })
+            body: JSON.stringify({ pregunta, top_k: 5, historial })
         });
 
         const data = await res.json();
@@ -133,6 +135,13 @@ async function sendMessage() {
         if (!res.ok) {
             appendMessage('bot', `Error: ${data.detail || 'Error desconocido'}`);
         } else {
+            // Guardar en historial para memoria de conversación
+            historial.push({ role: 'user', content: pregunta });
+            historial.push({ role: 'assistant', content: data.respuesta });
+
+            // Mantener solo los últimos 10 mensajes para no saturar el contexto
+            if (historial.length > 10) historial.splice(0, 2);
+
             appendMessage('bot', data.respuesta, data.boletines_usados);
         }
 
