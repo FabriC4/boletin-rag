@@ -29,7 +29,7 @@ DB_CONFIG = {
 }
 
 GROQ_API_KEY      = os.getenv("GROQ_API_KEY")
-GROQ_MODEL        = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+GROQ_MODEL        = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 MODELO_EMBEDDINGS = "paraphrase-multilingual-MiniLM-L12-v2"
 ARCHIVO_EMBEDDINGS = "embeddings.json"
 CARPETA_BOLETINES  = "boletines"
