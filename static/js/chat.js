@@ -47,7 +47,12 @@ function appendMessage(role, content, sources) {
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    bubble.textContent = content;
+    
+    if (role === 'user') {
+    bubble.textContent = content; // El usuario sigue viendo su texto plano
+    } else {
+    bubble.innerHTML = marked.parse(content); // El Asistente ahora renderiza Markdown real
+    }
 
     msg.appendChild(sender);
     msg.appendChild(bubble);

@@ -409,3 +409,33 @@ body {
     font-size: 11px;
     color: rgba(255,255,255,0.7);
 }
+
+/* Estilos para renderizar las tablas de la IA dentro de las burbujas */
+.bubble table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 13px;
+}
+
+.bubble th, .bubble td {
+    border: 1px solid #e0e0e0;
+    padding: 8px 10px;
+    text-align: left;
+}
+
+.bubble th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+    color: #333;
+}
+
+.bubble tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+.bubble h2, .bubble h3 {
+    margin-top: 14px;
+    margin-bottom: 6px;
+    color: #1a6fb5;
+}

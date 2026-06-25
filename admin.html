@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Panel Admin — CCPM</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+    <link rel="stylesheet" href="/static/css/admin.css"/>
+</head>
+<body>
+
+<div class="topbar"><a href="/">← Volver al chat</a></div>
+
+<div class="header">
+    <div class="logo-wrap"><img src="/logo.png" alt="Misiones CCPM"/></div>
+    <button class="btn-logout" id="btn-logout" style="display:none" onclick="logout()">
+        <i class="ti ti-logout"></i> Cerrar sesión
+    </button>
+</div>
+
+<div class="page-title">
+    <h1><i class="ti ti-chart-bar"></i> Panel de Administración</h1>
+</div>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-wrap">
+    <div class="login-card">
+        <h2><i class="ti ti-lock"></i> Acceso restringido</h2>
+        <div class="field">
+            <label>Usuario</label>
+            <input type="text" id="user-input" placeholder="admin"/>
+        </div>
+        <div class="field">
+            <label>Contraseña</label>
+            <input type="password" id="pass-input" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()"/>
+        </div>
+        <button class="btn-login" onclick="doLogin()">Ingresar</button>
+        <div class="error-msg" id="error-msg">Usuario o contraseña incorrectos</div>
+    </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="ti ti-messages"></i></div>
+            <div>
+                <div class="stat-value" id="total-consultas">—</div>
+                <div class="stat-label">Consultas totales</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="ti ti-calendar"></i></div>
+            <div>
+                <div class="stat-value" id="consultas-hoy">—</div>
+                <div class="stat-label">Consultas hoy</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="ti ti-file-text"></i></div>
+            <div>
+                <div class="stat-value" id="boletines-distintos">—</div>
+                <div class="stat-label">Boletines consultados</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3><i class="ti ti-chart-bar"></i> Consultas por día</h3>
+        <div class="chart-bars" id="chart-bars"></div>
+    </div>
+
+    <div class="section">
+        <h3><i class="ti ti-star"></i> Preguntas más frecuentes</h3>
+        <table>
+            <thead><tr><th>#</th><th>Pregunta</th><th>Veces</th></tr></thead>
+            <tbody id="tabla-preguntas"></tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h3><i class="ti ti-search"></i> Términos más buscados</h3>
+        <table>
+            <thead><tr><th>#</th><th>Término</th><th>Apariciones</th></tr></thead>
+            <tbody id="tabla-terminos"></tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h3><i class="ti ti-file-search"></i> Boletines más consultados</h3>
+        <table>
+            <thead><tr><th>#</th><th>Boletín</th><th>Consultas</th></tr></thead>
+            <tbody id="tabla-boletines"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<div class="footer">
+    <p>Dirección General del Centro de Cómputos — Provincia de Misiones &nbsp;|&nbsp; Panel de Administración</p>
+</div>
+
+<script src="static/js/admin.js"></script>
+</body>
+</html>

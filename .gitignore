@@ -6,3 +6,7 @@ dump_compat.dump
 boletin_DB/
 restore.bat
 boletines/
+embeddings.json
+estadisticas.json
+borrador.txt
+textos_boletines.json
