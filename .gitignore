@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 dump_plain.sql
+embeddings.json
 dump_compat.dump
 boletin_DB/
 restore.bat
@@ -9,4 +10,3 @@ boletines/
 estadisticas.json
 borrador.txt
 textos_boletines.json
-embeddings.json
