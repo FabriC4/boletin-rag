@@ -439,3 +439,12 @@ body {
     margin-bottom: 6px;
     color: #1a6fb5;
 }
+
+/* Resaltado idéntico al motor de búsqueda nativo */
+mark.resaltado-busqueda {
+    background-color: #ffeb3b; /* Amarillo brillante */
+    color: #000;
+    font-weight: bold;
+    padding: 0 2px;
+    border-radius: 2px;
+}

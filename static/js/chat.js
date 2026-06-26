@@ -43,15 +43,38 @@ function appendMessage(role, content, sources) {
 
     const sender = document.createElement('span');
     sender.className = 'sender';
-    sender.textContent = role === 'user' ? 'Vos' : 'Asistente';
+    sender.textContent = role === 'user' ? 'Usted' : 'Asistente';
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    
+
     if (role === 'user') {
-    bubble.textContent = content; // El usuario sigue viendo su texto plano
+        bubble.textContent = content;
     } else {
-    bubble.innerHTML = marked.parse(content); // El Asistente ahora renderiza Markdown real
+        // 1. Convertimos el Markdown de la respuesta a HTML estructurado
+        let htmlRenderizado = marked.parse(content);
+
+        // 2. Extraemos el término original que el usuario escribió desde el input de la pantalla
+        const inputActual = document.getElementById('input');
+        // Si el input está vacío porque ya se envió, podemos deducir la última palabra clave significativa
+        const ultimaPregunta = messages.querySelector('.msg.user:last-of-type .bubble')?.textContent || "";
+        
+        // Aislar palabras clave ignorando conectores cortos
+        const palabras = ultimaPregunta.split(/\s+/).filter(p => p.length > 3);
+        const terminoABuscar = palabras.length > 0 ? palabras[0] : "";
+
+        if (terminoABuscar) {
+            try {
+                // Escapamos caracteres raros y buscamos la palabra (ej: EMSA) de forma insensible a mayúsculas
+                // La envolvemos en una etiqueta <mark> para lograr el resaltado amarillo de tu primera foto
+                const regex = new RegExp(`(${terminoABuscar.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+                htmlRenderizado = htmlRenderizado.replace(regex, '<mark class="resaltado-busqueda">$1</mark>');
+            } catch (e) {
+                console.error("Error al resaltar texto:", e);
+            }
+        }
+
+        bubble.innerHTML = htmlRenderizado;
     }
 
     msg.appendChild(sender);
@@ -75,7 +98,6 @@ function appendMessage(role, content, sources) {
     messages.appendChild(msg);
     messages.scrollTop = messages.scrollHeight;
 }
-
 // ========================
 // ANIMACION DE TYPING
 // ========================

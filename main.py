@@ -145,7 +145,7 @@ def buscar_por_similitud(pregunta: str, top_k: int):
 
 
 # ========================
-# BUSQUEDA DE BOLETINES (Integrada al RAG por fragmentos)
+# BUSQUEDA DE BOLETINES
 # ========================
 
 # ========================
@@ -228,18 +228,31 @@ def buscar_boletines(pregunta: str, top_k: int):
                 # Recorte del fragmento exacto que rodea a la palabra (simula tu web de pruebas)
                 inicio = max(0, idx - 250)
                 fin = min(len(texto_doc), idx + 450)
-                fragmento_contexto = "..." + texto_doc[inicio:fin].strip().replace("\n", " ") + "..."
+                texto_recortado = texto_doc[inicio:fin].strip().replace("\n", " ")
+
+                # =========================================================================
+                # RESALTADOR EN NEGRITA PARA MARKDOWN (Compatible con index.html + marked.js)
+                # =========================================================================
+                if termino_encontrado and len(termino_encontrado) > 2:
+                    try:
+                        # Reemplaza la palabra encontrada por **palabra** de forma insensible a mayúsculas/minúsculas
+                        patron = re.compile(rf"({re.escape(termino_encontrado)})", re.IGNORECASE)
+                        texto_recortado = patron.sub(r"**\1**", texto_recortado)
+                    except Exception:
+                        pass
+
+                fragmento_contexto = "..." + texto_recortado + "..."
 
                 # Forzamos score máximo (1.0) para que tenga prioridad total
-                resultados_finales[row[0]] = row + (1.0, fragmento_contexto)
+                resultados_finales[row[0]] = row + (1.0, fragmento_contexto, termino_encontrado)
 
     # 5. Fallback semántico (Únicamente si la búsqueda textual estricta dio absolutamente 0 resultados)
     if not resultados_finales:
         print(f"🔍 Sin coincidencias explícitas para '{frase_busqueda}'. Usando fallback semántico por aproximación...")
-        similares = buscar_por_similitud(pregunta, top_k)
+        similes = buscar_por_similitud(pregunta, top_k)
         
-        similitud_map = {str(s["nro_boletin"]): s["similitud"] for s in similares}
-        chunk_map = {str(s["nro_boletin"]): s["texto_chunk"] for s in similares}
+        similitud_map = {str(s["nro_boletin"]): s["similitud"] for s in similes}
+        chunk_map = {str(s["nro_boletin"]): s["texto_chunk"] for s in similes}
         nros_semanticos = list(similitud_map.keys())
 
         if nros_semanticos:
@@ -260,8 +273,11 @@ def buscar_boletines(pregunta: str, top_k: int):
                     score_semantico = similitud_map.get(nro_b_str, 0.5)
                     texto_chunk = chunk_map.get(nro_b_str, row[3])
                     
+                    # =========================================================================
+                    # AQUÍ IBA EL CAMBIO: Sumamos 'frase_busqueda' al final como noveno elemento (b[8])
+                    # =========================================================================
                     if id_b not in resultados_finales:
-                        resultados_finales[id_b] = row + (score_semantico, texto_chunk)
+                        resultados_finales[id_b] = row + (score_semantico, texto_chunk, frase_busqueda)
 
     conn.close()
 
@@ -400,13 +416,15 @@ def consulta(body: Consulta):
     contexto  = construir_contexto(boletines, body.pregunta)
     respuesta = consultar_groq(body.pregunta, contexto, body.historial or [])
 
+    # Modificamos la lista para extraer b[8] que guarda la palabra exacta del match
     boletines_usados = [
         {
             "id": b[0],
             "nro_boletin": b[1],
             "tipo": b[6],
             "fecha": str(b[4]) if b[4] else None,
-            "similitud": round(b[7], 4)
+            "similitud": round(b[7], 4),
+            "termino_keyword": b[8] if len(b) > 8 else ""  # <--- NUEVO: Enviamos la palabra real a chat.js
         }
         for b in boletines
     ]
@@ -422,7 +440,6 @@ def consulta(body: Consulta):
     guardar_estadisticas(stats)
 
     return {"respuesta": respuesta, "boletines_usados": boletines_usados}
-
 
 # ========================
 # ENDPOINTS ADMIN
