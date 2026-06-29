@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
-
+import traceback
 load_dotenv()
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -26,7 +26,6 @@ CARPETA_BOLETINES = "boletines"
 ARCHIVO_TEXTOS    = "textos_boletines.json"
 WORKERS           = max(1, multiprocessing.cpu_count() - 1)
 
-
 def extraer_texto_pdf(args):
     """Función que corre en cada proceso worker."""
     nro_boletin, path_archivo = args
@@ -38,7 +37,13 @@ def extraer_texto_pdf(args):
     nombre_archivo = os.path.basename(path_archivo.strip())
     ruta_local = os.path.join(CARPETA_BOLETINES, nombre_archivo)
 
+    # 1. DETECTAR SI EL ARCHIVO NO EXISTE FÍSICAMENTE
     if not os.path.exists(ruta_local):
+        with open("errores_extraccion.txt", "a", encoding="utf-8") as log_file:
+            log_file.write(f"=== ARCHIVO FALTANTE BOLETÍN #{nro_boletin} ===\n")
+            log_file.write(f"Se buscó el archivo en: {ruta_local}\n")
+            log_file.write("Resultado: El archivo no existe en la carpeta 'boletines'.\n")
+            log_file.write("-" * 50 + "\n\n")
         return None
 
     texto_final = ""
@@ -52,7 +57,8 @@ def extraer_texto_pdf(args):
         # Intento 2: si el texto es muy corto activa OCR (lento pero necesario)
         if len(texto_final.strip()) < 150:
             texto_final = ""
-            paginas_imagenes = convert_from_path(ruta_local, dpi=150)
+            # Nota: le pasamos la ruta de poppler explícita para evitar fallas en subprocesos
+            paginas_imagenes = convert_from_path(ruta_local, dpi=150, poppler_path=r"C:\poppler\poppler-26.02.0\Library\bin")
 
             with pdfplumber.open(ruta_local) as pdf:
                 for i, (page, imagen) in enumerate(zip(pdf.pages, paginas_imagenes)):
@@ -68,9 +74,21 @@ def extraer_texto_pdf(args):
                     texto_final += f"--- PÁGINA {i+1} ---\n{texto_pagina}\n"
 
     except Exception as e:
+        # 2. CAPTURAR CRASHES EN EL TXT
+        error_detalle = traceback.format_exc()
+        with open("errores_extraccion.txt", "a", encoding="utf-8") as log_file:
+            log_file.write(f"=== CRASH BOLETÍN #{nro_boletin} ===\n{error_detalle}\n\n")
         return None
 
+    # 3. DETECTAR SI EL PDF QUEDÓ COMPLEMENTE VACÍO
     if not texto_final.strip():
+        peso_archivo = os.path.getsize(ruta_local)
+        with open("errores_extraccion.txt", "a", encoding="utf-8") as log_file:
+            log_file.write(f"=== RECHAZADO BOLETÍN #{nro_boletin} ===\n")
+            log_file.write(f"Ruta: {ruta_local}\n")
+            log_file.write(f"Peso: {peso_archivo} bytes\n")
+            log_file.write("Motivo: El proceso terminó pero no se pudo extraer ninguna letra (PDF vacío o ilegible).\n")
+            log_file.write("-" * 50 + "\n\n")
         return None
 
     return {

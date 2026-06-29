@@ -54,24 +54,24 @@ function appendMessage(role, content, sources) {
         // 1. Convertimos el Markdown de la respuesta a HTML estructurado
         let htmlRenderizado = marked.parse(content);
 
-        // 2. Extraemos el término original que el usuario escribió desde el input de la pantalla
-        const inputActual = document.getElementById('input');
-        // Si el input está vacío porque ya se envió, podemos deducir la última palabra clave significativa
-        const ultimaPregunta = messages.querySelector('.msg.user:last-of-type .bubble')?.textContent || "";
-        
-        // Aislar palabras clave ignorando conectores cortos
-        const palabras = ultimaPregunta.split(/\s+/).filter(p => p.length > 3);
-        const terminoABuscar = palabras.length > 0 ? palabras[0] : "";
+        try {
+            // 2. Extraemos de forma segura la última pregunta del chat
+            const msgUsuario = messages.querySelectorAll('.msg.user .bubble');
+            const ultimaPregunta = msgUsuario.length > 0 ? msgUsuario[msgUsuario.length - 1].textContent : "";
+            
+            // Aislar palabras clave ignorando conectores cortos
+            const palabras = ultimaPregunta.split(/\s+/).filter(p => p.length > 3);
+            const terminoABuscar = palabras.length > 0 ? palabras[0] : "";
 
-        if (terminoABuscar) {
-            try {
-                // Escapamos caracteres raros y buscamos la palabra (ej: EMSA) de forma insensible a mayúsculas
-                // La envolvemos en una etiqueta <mark> para lograr el resaltado amarillo de tu primera foto
+            if (terminoABuscar) {
+                // Escapamos caracteres raros y buscamos de forma insensible a mayúsculas/minúsculas
                 const regex = new RegExp(`(${terminoABuscar.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+                
+                // Al usar $1 nos aseguramos de mantener el formato nativo (si en el PDF está en MAYÚSCULAS, queda en MAYÚSCULAS)
                 htmlRenderizado = htmlRenderizado.replace(regex, '<mark class="resaltado-busqueda">$1</mark>');
-            } catch (e) {
-                console.error("Error al resaltar texto:", e);
             }
+        } catch (e) {
+            console.error("Error al resaltar texto:", e);
         }
 
         bubble.innerHTML = htmlRenderizado;
@@ -87,8 +87,21 @@ function appendMessage(role, content, sources) {
         sources.forEach(s => {
             const chip = document.createElement('div');
             chip.className = 'chip';
-            chip.innerHTML = `<i class="ti ti-file-text" style="font-size:11px"></i> Boletín #${s.nro_boletin}`;
-            chip.title = `Similitud: ${(s.similitud * 100).toFixed(0)}% | ${s.tipo || ''} | ${s.fecha ? s.fecha.split('T')[0] : ''}`;
+            chip.title = `${s.tipo || ''} | ${s.fecha ? s.fecha.split('T')[0] : ''}`;
+
+            const textoContenido = `<i class="ti ti-file-text" style="font-size:11px"></i> Boletín #${s.nro_boletin}`;
+
+            if (s.url_pdf) {
+                // Envolvemos todo el interior del chip en el link interactivo para facilitar la descarga
+                chip.innerHTML = `
+                    <a href="${s.url_pdf}" target="_blank" title="Descargar PDF" 
+                       style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 4px; font-weight: bold;">
+                        ${textoContenido} <i class="ti ti-download" style="font-size:11px; margin-left:2px;"></i> [PDF]
+                    </a>`;
+            } else {
+                chip.innerHTML = textoContenido;
+            }
+
             sourcesDiv.appendChild(chip);
         });
 
@@ -98,6 +111,7 @@ function appendMessage(role, content, sources) {
     messages.appendChild(msg);
     messages.scrollTop = messages.scrollHeight;
 }
+
 // ========================
 // ANIMACION DE TYPING
 // ========================

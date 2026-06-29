@@ -1,5 +1,6 @@
 import os
 import json
+import traceback  # <--- AGREGADO: Para capturar el detalle exacto de los errores
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 import multiprocessing
@@ -109,7 +110,13 @@ def main():
             })
 
     except Exception as e:
+        # 🔥 MODIFICADO: Ahora guardamos el rastro completo (Traceback) en un archivo .log
+        error_detalle = traceback.format_exc()
         print(f"\n❌ Error durante la generación masiva de embeddings: {e}")
+        print("👉 Detalles guardados en 'errores_embeddings.log'")
+        with open("errores_embeddings.log", "a", encoding="utf-8") as log_file:
+            log_file.write(f"=== ERROR EN GENERACIÓN MASIVA ===\n{error_detalle}\n\n")
+            
     finally:
         # 🚨 SIEMPRE hay que cerrar el pool de procesos para liberar la memoria de la compu
         modelo.stop_multi_process_pool(pool)
