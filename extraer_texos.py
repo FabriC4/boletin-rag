@@ -9,6 +9,7 @@ from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 import traceback
+import requests
 load_dotenv()
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -37,15 +38,44 @@ def extraer_texto_pdf(args):
     nombre_archivo = os.path.basename(path_archivo.strip())
     ruta_local = os.path.join(CARPETA_BOLETINES, nombre_archivo)
 
-    # 1. DETECTAR SI EL ARCHIVO NO EXISTE FÍSICAMENTE
+    # 1. DETECTAR SI EL ARCHIVO NO EXISTE FÍSICAMENTE e INTENTAR DESCARGARLO
     if not os.path.exists(ruta_local):
-        with open("errores_extraccion.txt", "a", encoding="utf-8") as log_file:
-            log_file.write(f"=== ARCHIVO FALTANTE BOLETÍN #{nro_boletin} ===\n")
-            log_file.write(f"Se buscó el archivo en: {ruta_local}\n")
-            log_file.write("Resultado: El archivo no existe en la carpeta 'boletines'.\n")
-            log_file.write("-" * 50 + "\n\n")
-        return None
+        # Creamos la carpeta 'boletines' por si acaso no existiera
+        os.makedirs(CARPETA_BOLETINES, exist_ok=True)
+        
+        # Construimos la URL usando el nombre real del archivo
+        url_descarga = f"https://www.boletindigital.misiones.gov.ar/boletines/{nombre_archivo}"
+        
+        try:
+            # Simulamos un navegador para evitar bloqueos (User-Agent)
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+            respuesta = requests.get(url_descarga, headers=headers, timeout=15)
+            
+            if respuesta.status_code == 200:
+                # Si el archivo se encuentra, lo guardamos en la ruta local
+                with open(ruta_local, "wb") as f:
+                    f.write(respuesta.content)
+                # Opcional: imprimir en consola para saber que se descargó con éxito
+                # print(f" Descargado con éxito: {nombre_archivo}")
+            else:
+                # Si el servidor responde con un error (ej. 404), registramos la falta
+                with open("errores_extraccion.txt", "a", encoding="utf-8") as log_file:
+                    log_file.write(f"=== ARCHIVO FALTANTE BOLETÍN #{nro_boletin} ===\n")
+                    log_file.write(f"Se buscó en local: {ruta_local}\n")
+                    log_file.write(f"Intento de descarga fallido (Status: {respuesta.status_code}) de: {url_descarga}\n")
+                    log_file.write("-" * 50 + "\n\n")
+                return None
+                
+        except Exception as e:
+            # Captura errores de red, timeouts, etc.
+            with open("errores_extraccion.txt", "a", encoding="utf-8") as log_file:
+                log_file.write(f"=== ERROR DE RED/DESCARGA BOLETÍN #{nro_boletin} ===\n")
+                log_file.write(f"URL: {url_descarga}\n")
+                log_file.write(f"Error: {str(e)}\n")
+                log_file.write("-" * 50 + "\n\n")
+            return None
 
+    # Si llegó aquí, el archivo ya existía o se descargó correctamente.
     texto_final = ""
 
     try:
@@ -57,7 +87,6 @@ def extraer_texto_pdf(args):
         # Intento 2: si el texto es muy corto activa OCR (lento pero necesario)
         if len(texto_final.strip()) < 150:
             texto_final = ""
-            # Nota: le pasamos la ruta de poppler explícita para evitar fallas en subprocesos
             paginas_imagenes = convert_from_path(ruta_local, dpi=150, poppler_path=r"C:\poppler\poppler-26.02.0\Library\bin")
 
             with pdfplumber.open(ruta_local) as pdf:

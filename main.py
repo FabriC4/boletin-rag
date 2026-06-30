@@ -68,12 +68,14 @@ print("Cargando modelo de embeddings...")
 modelo = SentenceTransformer(MODELO_EMBEDDINGS)
 print("Modelo cargado.")
 
-print("Cargando embeddings desde JSON...")
+print("Cargando embeddings desde JSON (optimizando memoria)...")
 with open(ARCHIVO_EMBEDDINGS, "r", encoding="utf-8") as f:
     datos_embeddings = json.load(f)
 
-vectores_matrix = np.array([e["vector"] for e in datos_embeddings])
-print(f"Embeddings cargados: {len(datos_embeddings)}")
+# Extraemos la matriz de vectores y liberamos de inmediato la clave 'vector' de cada elemento 
+# para que el recolector de basura de Python limpie la RAM consumida por el JSON de texto.
+vectores_matrix = np.array([e.pop("vector") for e in datos_embeddings], dtype=np.float32)
+print(f"Embeddings cargados con éxito en matriz limpia: {len(datos_embeddings)}")
 
 print("Cargando textos completos extraídos desde JSON...")
 if os.path.exists(ARCHIVO_TEXTOS):
@@ -219,7 +221,7 @@ def buscar_boletines(pregunta: str, top_k: int):
     resultados_finales = {}
 
     # 2. Limpieza de la consulta
-    palabras_ruido = ["buscar", "buscame", "encuentra", "boletin", "boletines", "que", "hablen",
+    palabras_ruido = ["dime", "decime", "busca", "buscar", "buscame", "encuentra", "boletin", "boletines", "que", "hablen",
                       "sobre", "el", "la", "los", "en", "donde", "aparece", "aparecen", "con", "texto", "palabra"]
     palabras_limpias = [p for p in pregunta.split() if p.lower() not in palabras_ruido]
     frase_busqueda = " ".join(palabras_limpias).upper().strip() if palabras_limpias else pregunta.upper().strip()
@@ -266,7 +268,7 @@ def buscar_boletines(pregunta: str, top_k: int):
             fragmento_contexto = obtener_fragmento_contexto(mapa_textos_completos.get(nro_b_str, ""), palabras_limpias)
 
             # 2. Definimos qué palabra clave se envía para el resaltador del frontend
-            termino_match = palabras_limpias[0] if palabras_limpias else frase_busqueda
+            termino_match = " ".join(palabras_limpias) if palabras_limpias else frase_busqueda
 
             # 3. Estructuramos la tupla con el fragmento inteligente e indexamos
             # id, nro, nro2, desc, fecha, estado, tipo, sim, texto_chunk, palabra_match, patharchivo
